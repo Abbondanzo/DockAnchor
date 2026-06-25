@@ -38,8 +38,16 @@ if [[ ! -f Resources/AppIcon.icns ]]; then
 fi
 cp Resources/AppIcon.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
 
-echo "==> Ad-hoc code signing..."
-codesign --force --deep --sign - "$APP_DIR"
+SIGN_IDENTITY="DockAnchor Self-Signed"
+if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_IDENTITY"; then
+	echo "==> Code signing with '$SIGN_IDENTITY' (stable identity)..."
+	codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_DIR"
+else
+	echo "==> '$SIGN_IDENTITY' not found — ad-hoc signing."
+	echo "    Run scripts/setup-signing.sh once for a stable signature that"
+	echo "    preserves your Accessibility permission across rebuilds."
+	codesign --force --deep --sign - "$APP_DIR"
+fi
 
 echo "==> Done: $APP_DIR"
 echo "    Run with: open \"$APP_DIR\""
