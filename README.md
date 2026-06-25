@@ -24,17 +24,21 @@ bash scripts/build-app.sh
 open dist/DockAnchor.app
 ```
 
-The app appears only in the menu bar (no Dock icon of its own). On first run, choose
-**Grant Accessibility Permission…** from its menu, enable DockAnchor in
-*System Settings → Privacy & Security → Accessibility*, and it activates automatically.
+The app appears only in the menu bar (no Dock icon of its own). On first launch it
+**prompts for Accessibility permission automatically** — enable DockAnchor in
+*System Settings → Privacy & Security → Accessibility* and it activates as soon as you do.
+(You can re-trigger the prompt later via **Grant Accessibility Permission…** in the menu.)
+First launch also **enables Launch at Login by default**; toggle it off from the menu if
+you prefer.
 
 ## Menu
 
 - **Enabled** — turn the cursor barrier on/off.
 - **Lock Dock to ▸** — pick which display the Dock is pinned to (defaults to the main
   display; the choice is remembered per display, even across reconnects).
-- **Launch at Login** — start DockAnchor automatically. For this to register reliably,
-  move `DockAnchor.app` to `/Applications` or `~/Applications` first.
+- **Launch at Login** — start DockAnchor automatically (on by default after first run).
+  For this to register reliably, move `DockAnchor.app` to `/Applications` or
+  `~/Applications` first.
 - **Quit**.
 
 ## Notes

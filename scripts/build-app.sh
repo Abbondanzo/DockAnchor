@@ -32,6 +32,12 @@ mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$APP_DIR/Contents/Info.plist"
 
+if [[ ! -f Resources/AppIcon.icns ]]; then
+	echo "==> AppIcon.icns missing, generating..."
+	bash scripts/generate-icon.sh
+fi
+cp Resources/AppIcon.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
+
 echo "==> Ad-hoc code signing..."
 codesign --force --deep --sign - "$APP_DIR"
 

@@ -13,12 +13,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        applyFirstRunDefaults()
         setupStatusItem()
 
         dockGuard.dockEdge = DockGuard.currentDockEdge()
         dockGuard.selectedDisplayID = displayStore.resolvedSelectedDisplayID()
 
-        startGuardIfPossible()
+        if Permissions.isTrusted {
+            startGuardIfPossible()
+        } else {
+            // First-launch prompt for Accessibility; the guard starts as soon
+            // as the user grants it (see beginPermissionPolling()).
+            Permissions.promptForAccessibility()
+            beginPermissionPolling()
+        }
 
         NotificationCenter.default.addObserver(
             self,
@@ -26,6 +34,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+    }
+
+    /// On the very first run, enable Launch at Login by default. The user can
+    /// turn it off from the menu afterward; we only auto-register once.
+    private func applyFirstRunDefaults() {
+        let key = "DidApplyFirstRunDefaults"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        LaunchAtLogin.set(true)
+        UserDefaults.standard.set(true, forKey: key)
     }
 
     // MARK: - Setup
@@ -156,7 +173,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func grantPermission() {
         Permissions.promptForAccessibility()
         Permissions.openSettings()
+        beginPermissionPolling()
+    }
 
+    /// Polls until Accessibility is granted, then starts the guard.
+    private func beginPermissionPolling() {
         permissionTimer?.invalidate()
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
