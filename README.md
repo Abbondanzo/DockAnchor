@@ -1,57 +1,150 @@
 # DockAnchor
 
-A tiny macOS menu-bar app that **locks the Dock to one display**. On a multi-monitor
-setup with the Dock set to auto-hide, macOS slides the Dock onto whichever screen you
-push the cursor against at the bottom edge. DockAnchor stops that — the Dock stays on
-the display you choose — **without** needing to turn off *Displays Have Separate Spaces*
-(which forces a logout and removes per-display menu bars/spaces).
+**Lock the macOS Dock to one display.**
+
+![platform](https://img.shields.io/badge/platform-macOS%2013%2B-blue)
+![swift](https://img.shields.io/badge/swift-5.9%2B-orange)
+![license](https://img.shields.io/badge/license-MIT-green)
+
+On a multi-monitor Mac with the Dock set to auto-hide, macOS slides the Dock onto
+whichever screen you push the cursor against at the bottom edge. DockAnchor stops that —
+the Dock stays on the display you choose — **without** turning off *Displays Have Separate
+Spaces* (which forces a logout and removes per-display menu bars and spaces).
+
+It's a tiny menu-bar app (no Dock icon of its own) that does exactly one thing and gets
+out of the way.
+
+## Features
+
+- 📌 Pin the Dock to a display of your choice; it never jumps to the others.
+- 🖥️ Works with **bottom**, **left**, or **right** Docks — the edge is detected
+  automatically.
+- 🔁 Remembers your chosen display by UUID, so it survives reconnects (falls back to the
+  main display if that display is gone).
+- 🚀 Optional **Launch at Login** (on by default after first run).
+- 🪶 Minimal: a single status-bar item, no windows, no background polling of the Dock.
 
 ## How it works
 
 The Dock's auto-show is decided by the WindowServer purely from the cursor's global
-position; a transparent overlay window can't intercept it. Instead DockAnchor installs a
-`CGEventTap` that watches mouse-move/drag events and, when the cursor enters the bottom
-~2px of a **non-selected** display, nudges it back up a pixel. This builds an invisible
-"floor" so the bottom-edge hit region of the other displays can never be reached, while
-the selected display's edge is left untouched so the Dock works normally there.
+position — a transparent overlay window can't intercept it. Instead, DockAnchor installs a
+[`CGEventTap`](https://developer.apple.com/documentation/coregraphics/cgevent/) that
+watches mouse-move/drag events and, when the cursor enters the bottom ~2px of a
+**non-selected** display, nudges it back up a pixel. This builds an invisible "floor" so
+the bottom-edge hit region of the other displays can never be reached, while the selected
+display's edge is left untouched so the Dock works normally there.
 
-This requires **Accessibility** permission (an active event tap that modifies events).
+Because the tap modifies events, it needs **Accessibility** permission.
 
-## Build & run
+## Installation
+
+### Build from source
+
+Requires macOS 13+ and a Swift 5.9+ toolchain (Xcode or the Swift toolchain).
 
 ```sh
+git clone <your-fork-url> DockAnchor
+cd DockAnchor
+
+# (Recommended) create a stable code-signing identity first — see below.
+bash scripts/setup-signing.sh
+
+# Build the .app bundle into dist/
 bash scripts/build-app.sh
-open dist/DockAnchor.app
+
+# Install and run
+cp -R dist/DockAnchor.app /Applications/
+open /Applications/DockAnchor.app
 ```
 
-The app appears only in the menu bar (no Dock icon of its own). On first launch it
-**prompts for Accessibility permission automatically** — enable DockAnchor in
-*System Settings → Privacy & Security → Accessibility* and it activates as soon as you do.
-(You can re-trigger the prompt later via **Grant Accessibility Permission…** in the menu.)
-First launch also **enables Launch at Login by default**; toggle it off from the menu if
-you prefer.
+> Move the app to `/Applications` (or `~/Applications`) before enabling Launch at Login so
+> it registers against a stable path.
 
-## Menu
+### Stable signing (recommended)
+
+`scripts/setup-signing.sh` creates a self-signed code-signing identity
+(`DockAnchor Self-Signed`) in your login keychain and `build-app.sh` uses it
+automatically. This gives every build the **same** signature.
+
+Why it matters: macOS ties Accessibility grants to an app's signing identity. Plain
+ad-hoc signing produces a new identity on every build, so macOS keeps "forgetting" the
+permission. A stable identity means you grant Accessibility **once** and it persists across
+rebuilds. The script is safe to re-run and needs no admin password (it intentionally does
+not add the cert to the Gatekeeper trust store — only a stable signature is required).
+
+If you skip it, `build-app.sh` falls back to ad-hoc signing and everything still works —
+you'll just be re-prompted for Accessibility after rebuilds.
+
+## First launch & permissions
+
+On first launch DockAnchor prompts for Accessibility automatically. Enable it under
+**System Settings → Privacy & Security → Accessibility**; the guard activates the moment
+you do (no restart needed). You can re-trigger the prompt anytime via **Grant Accessibility
+Permission…** in the menu.
+
+## Usage
+
+Everything lives in the menu-bar item:
 
 - **Enabled** — turn the cursor barrier on/off.
-- **Lock Dock to ▸** — pick which display the Dock is pinned to (defaults to the main
-  display; the choice is remembered per display, even across reconnects).
+- **Lock Dock to ▸** — pick the display the Dock is pinned to (defaults to the main
+  display).
 - **Launch at Login** — start DockAnchor automatically (on by default after first run).
-  For this to register reliably, move `DockAnchor.app` to `/Applications` or
-  `~/Applications` first.
 - **Quit**.
 
-## Notes
+## Troubleshooting
 
-- Works for the Dock at the **bottom** (default), and also **left**/**right** — it reads
-  your current Dock position automatically.
-- Tradeoff: the bottom ~2px of non-selected displays becomes unreachable by the cursor.
-  That strip is reserved for Dock triggering anyway; the band is kept small to minimize
-  any effect on dragging windows to that edge.
-- The build is ad-hoc code-signed. After a rebuild that changes the signature, macOS may
-  ask you to re-grant Accessibility permission. For a stable identity, sign with a
-  self-signed or Developer ID certificate instead.
+**It still says "Needs Permission" after I toggled it on.**
+The Accessibility list probably has a stale entry from an earlier build with a different
+signature. Reset DockAnchor's permission record and grant it fresh:
 
-## Requirements
+```sh
+osascript -e 'quit app "DockAnchor"' 2>/dev/null
+tccutil reset Accessibility com.abbo.dockanchor
+open /Applications/DockAnchor.app
+```
 
-macOS 13+, Swift 5.9+ / Xcode toolchain.
+Then toggle it on once more. Using the stable signing identity (above) prevents this from
+recurring. If you see multiple "DockAnchor" rows in the list, remove them all with the "–"
+button before re-granting.
+
+**The app icon looks generic in Finder.**
+macOS caches app icons aggressively. It usually refreshes after the app is moved to
+`/Applications` and reopened.
+
+## Configuration notes
+
+- The guarded band is ~2px. That bottom strip on non-selected displays becomes unreachable
+  by the cursor — it's reserved for Dock triggering anyway, and the band is kept small to
+  minimize any effect on dragging windows to that edge.
+- The bundle identifier is `com.abbo.dockanchor`. If you publish your own fork, change it
+  in `Resources/Info.plist`.
+
+## Development
+
+```
+Sources/DockAnchor/
+  main.swift          NSApplication bootstrap (.accessory policy)
+  AppDelegate.swift   Status item, menu, lifecycle, screen-change handling
+  DockGuard.swift     CGEventTap + cursor-clamp logic (the core)
+  DisplayStore.swift  Display enumeration + selection persisted by UUID
+  Permissions.swift   Accessibility check / prompt
+  LaunchAtLogin.swift SMAppService login-item wrapper
+scripts/
+  build-app.sh        Build + assemble the .app + code sign
+  setup-signing.sh    Create the stable self-signed identity (one-time)
+  generate-icon.swift Render the app icon artwork
+  generate-icon.sh    Build Resources/AppIcon.icns from the renderer
+```
+
+Build for development with:
+
+```sh
+swift build           # or: swift build -c release
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## License
+
+[MIT](LICENSE) © Peter Abbondanzo
