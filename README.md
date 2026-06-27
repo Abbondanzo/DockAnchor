@@ -39,7 +39,18 @@ Because the tap modifies events, it needs Accessibility permission.
 Requires macOS 13+ and a Swift 5.9+ toolchain (Xcode or the Swift toolchain).
 
 ```sh
-git clone <your-fork-url> DockAnchor && cd DockAnchor && bash scripts/setup-signing.sh && bash scripts/build-app.sh && cp -R dist/DockAnchor.app /Applications/ && open /Applications/DockAnchor.app
+git clone <your-fork-url> DockAnchor
+cd DockAnchor
+
+# (Recommended) create a stable code-signing identity first - see below.
+bash scripts/setup-signing.sh
+
+# Build the .app bundle into dist/
+bash scripts/build-app.sh
+
+# Install and run
+cp -R dist/DockAnchor.app /Applications/
+open /Applications/DockAnchor.app
 ```
 
 Move the app to `/Applications` (or `~/Applications`) before enabling Launch at Login so
@@ -79,20 +90,10 @@ Everything lives in the menu-bar item:
 
 ## Troubleshooting
 
-- **Still says "Needs Permission" after toggling it on.** The Accessibility list has a
-  stale entry from an earlier build with a different signature. Reset it and grant fresh:
-
-  ```sh
-  osascript -e 'quit app "DockAnchor"' 2>/dev/null
-  tccutil reset Accessibility com.abbo.dockanchor
-  open /Applications/DockAnchor.app
-  ```
-
-  Then toggle it on once more. The stable signing identity (above) prevents this from
-  recurring. If multiple "DockAnchor" rows show in the list, remove them all with the "-"
-  button before re-granting.
-- **App icon looks generic in Finder.** macOS caches app icons aggressively. It usually
-  refreshes after the app is moved to `/Applications` and reopened.
+| Problem | Solution |
+| --- | --- |
+| Still says "Needs Permission" after toggling it on | The Accessibility list has a stale entry from an earlier build with a different signature. Quit the app, run `tccutil reset Accessibility com.abbo.dockanchor`, reopen it, and toggle permission on again. The stable signing identity (above) prevents this from recurring. If multiple "DockAnchor" rows show in the list, remove them all with the "-" button before re-granting. |
+| App icon looks generic in Finder | macOS caches app icons aggressively. It usually refreshes after the app is moved to `/Applications` and reopened. |
 
 ## Configuration notes
 
